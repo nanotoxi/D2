@@ -477,6 +477,7 @@ app.post('/api/billing/resume', async (req, res) => {
 });
 
 app.get('/health', (_req, res) => res.json({ ok: true }));
+app.get('/api/health', (_req, res) => res.json({ ok: true }));
 
 app.listen(Number(PORT), () => {
   console.log(`Stripe backend listening on http://localhost:${PORT}`);
