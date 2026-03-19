@@ -10,6 +10,7 @@ const {
   PORT = '4242',
   APP_URL = 'http://localhost:5173',
   DASHBOARD_URL = 'http://localhost:3000',
+  CORS_ORIGINS = '',
   STRIPE_SECRET_KEY,
   STRIPE_INDIVIDUAL_PRICE_ID,
   COOKIE_SECURE = 'false',
@@ -22,11 +23,26 @@ if (!STRIPE_INDIVIDUAL_PRICE_ID) throw new Error('Missing STRIPE_INDIVIDUAL_PRIC
 const stripe = new Stripe(STRIPE_SECRET_KEY, { apiVersion: '2025-01-27.acacia' });
 
 const app = express();
-// Allow requests from both the landing page and the dashboard
-const allowedOrigins = [APP_URL, DASHBOARD_URL].filter(Boolean);
+// Allow requests from landing page, dashboard, and any extra origins in CORS_ORIGINS
+const allowedOrigins = [
+  APP_URL,
+  DASHBOARD_URL,
+  ...CORS_ORIGINS.split(',').map(o => o.trim()),
+].filter(Boolean);
+console.log('Allowed CORS origins:', allowedOrigins);
+
+function isOriginAllowed(origin) {
+  if (!origin) return true;
+  if (allowedOrigins.includes(origin)) return true;
+  // Allow all Vercel and Railway preview/production deployments
+  if (origin.endsWith('.vercel.app')) return true;
+  if (origin.endsWith('.railway.app')) return true;
+  return false;
+}
+
 app.use(cors({
   origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) {
+    if (isOriginAllowed(origin)) {
       callback(null, true);
     } else {
       callback(new Error(`CORS blocked: ${origin}`));
