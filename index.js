@@ -4,7 +4,17 @@ import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import Stripe from 'stripe';
 import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
 import { query } from './db.js';
+
+// One-time auto-login tokens (signup → dashboard redirect)
+const autoLoginTokens = new Map();
+setInterval(() => {
+  const now = Date.now();
+  for (const [k, v] of autoLoginTokens) {
+    if (v.expiresAt < now) autoLoginTokens.delete(k);
+  }
+}, 60_000);
 
 const {
   PORT = '4242',
@@ -139,7 +149,10 @@ app.post('/api/auth/signup', async (req, res) => {
 
     const session = { email, name, role: 'user', trialExpiry };
     setAuthSession(res, session);
-    return res.json({ user: session });
+    // Generate one-time token for cross-domain auto-login to dashboard
+    const autoLoginToken = crypto.randomUUID();
+    autoLoginTokens.set(autoLoginToken, { session, expiresAt: Date.now() + 90_000 });
+    return res.json({ user: session, autoLoginToken });
   } catch (err) {
     if (err.code === '23505') {
       return res.status(409).json({ error: 'Email already in use' });
@@ -167,6 +180,17 @@ app.post('/api/auth/logout', (_req, res) => {
   clearAuthSession(res);
   clearStripeCustomerId(res);
   return res.json({ success: true });
+});
+
+// Exchange one-time token for session (cross-domain signup → dashboard)
+app.post('/api/auth/exchange-token', (req, res) => {
+  const { token } = req.body || {};
+  const entry = token && autoLoginTokens.get(token);
+  if (!entry || entry.expiresAt < Date.now()) {
+    return res.status(401).json({ error: 'Invalid or expired token' });
+  }
+  autoLoginTokens.delete(token);
+  return res.json({ user: entry.session });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
