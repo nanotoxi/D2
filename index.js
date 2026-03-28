@@ -202,7 +202,7 @@ app.post('/api/simulations', async (req, res) => {
     if (!session) return res.status(401).json({ error: 'Unauthorized' });
     const { nanoparticle_id, core_size, zeta_potential, surface_area, dosage, exposure_time, toxicity_prediction, confidence, cytotoxicity, risk_level } = req.body || {};
     await query(
-      `INSERT INTO simulations (user_email, nanoparticle_id, core_size, zeta_potential, surface_area, dosage, exposure_time, toxicity_prediction, confidence, cytotoxicity, risk_level)
+      `INSERT INTO simulations (user_email, particle_id, core_size, zeta_potential, surface_area, dosage, exposure_time, toxicity_prediction, confidence, cytotoxicity, risk_level)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
       [session.email, nanoparticle_id, core_size, zeta_potential, surface_area, dosage, exposure_time, toxicity_prediction, confidence, cytotoxicity, risk_level]
     );
